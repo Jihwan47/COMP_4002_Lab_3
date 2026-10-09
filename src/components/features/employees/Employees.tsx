@@ -1,14 +1,16 @@
 import { useState } from "react";
-import { departmentData } from "../../../data/departments";
 import styles from "../Features.module.css";
-import { Guid } from "guid-typescript";
+import { useFormInput } from "../../../hook/useFormInput";
+import * as employeeService from "../../../services/employeeService";
 
 export function Employees() {
-    const [firstNameValue, setFirstNameValue] = useState("");
-    const [lastNameValue, setLastNameValue] = useState("");
-    const [formMessages, setFormMessages] = useState<string[]>([])
-    const [departmentInput, setDepartmentInput] = useState("");
-    const [departmentList, setDepartmentList] = useState(departmentData);
+    // each input's value + message
+    const firstName = useFormInput();
+    const lastName = useFormInput();
+    const department = useFormInput();
+    
+    // state for the list of departments and employees
+    const [departmentList, setDepartmentList] = useState(employeeService.getDepartments());
 
     const departmentListElement = departmentList.map((d) => {
         return <section key={d.id}>
@@ -23,12 +25,12 @@ export function Employees() {
 
     const departmentDropdownInput = (
             <select
-                value={departmentInput}
-                onChange={e => setDepartmentInput(e.target.value)}
+                value={department.value}
+                onChange={e => department.setValue(e.target.value)}
             >
                 <option value="">-- Select Department --</option>
                 {
-                    departmentData.map(d => {
+                    departmentList.map(d => {
                         return(
                             <option 
                                 key={"opt" + d.id} 
@@ -42,47 +44,22 @@ export function Employees() {
     );
 
     const handleEmployeeSubmit = () => {
-        let isValid = true;
-        setFormMessages([]);
+        const result = employeeService.validateEmployee(
+            firstName.value, 
+            lastName.value, 
+            department.value
+        );
 
-        if(firstNameValue.trim().length < 3) {
-            isValid = false;
-            setFormMessages(s => {
-                return [...s, "First names must have at least three characters."]
-            });
-        }
+        firstName.validate(() => result.errors.firstName);
+        lastName.validate(() => result.errors.lastName);
+        department.validate(() => result.errors.department);
 
-        if(!departmentData.find(d => d.name === departmentInput)) {
-            isValid = false;
+        if (result.isValid) {
+            firstName.reset();
+            lastName.reset();
+            department.reset();
 
-            setFormMessages(s => {
-                return [...s, "Employee must be in an existing department."]
-            })
-        }
-
-        if(isValid) {
-            setFirstNameValue("");
-            setLastNameValue("");
-
-            setDepartmentList(oldState => oldState.map(d => {
-                if(d.name !== departmentInput) {
-                    return d;
-                } else {
-                    // must create a deep clone of the department object being updated
-                    return {
-                        id: d.id,
-                        name: d.name,
-                        employees: [...d.employees,
-                            {
-                                id: Guid.create().toString(),
-                                firstName: firstNameValue,
-                                lastName: lastNameValue
-                            }
-
-                        ]
-                    };
-                }
-            }));
+        setDepartmentList(employeeService.getDepartments());
         }
     }
 
@@ -103,38 +80,29 @@ export function Employees() {
                         First Name: <input 
                             name="firstName" 
                             type="text" 
-                            value = {firstNameValue}
-                            onChange={e => setFirstNameValue(e.target.value)}
+                            value = {firstName.value}
+                            onChange={e => firstName.setValue(e.target.value)}
                         /> 
                     </label>
+                    {firstName.errorMessages.map((msg, index) => <div key={index} className={styles.error}>{msg}</div>)}
                 </div>
                 <div>
                     <label>
                         Last Name: <input 
                             name="lastName" 
                             type="text" 
-                            value = {lastNameValue}
-                            onChange={e => setLastNameValue(e.target.value)}
+                            value = {lastName.value}
+                            onChange={e => lastName.setValue(e.target.value)}
                             />
                     </label>
+                    {lastName.errorMessages.map((msg, index) => <div key={index} className={styles.error}>{msg}</div>)}
                 </div>
                 <div>
                     <label>
                         Department: 
                             {departmentDropdownInput}
                     </label>
-                </div>
-                <div>
-                    {
-                        formMessages.map(message => {
-                            return <p 
-                                className={styles.error}
-                                >
-                                    {message}
-                                </p>    
-                            }
-                        )
-                    }
+                    {department.errorMessages.map((msg, index) => <div key={index} className={styles.error}>{msg}</div>)}
                 </div>
                 <div>
                     <input type="submit" />
