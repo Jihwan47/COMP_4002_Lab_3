@@ -1,7 +1,13 @@
-import { roleData } from "../../../data/roles"; 
+import { useState } from "react";
+import * as employeeService from "../../../service/employeeService";
+import { AddRoleForm } from "./AddRoleForm";
 import styles from "../Features.module.css";
 
 export function Organization() {
+
+    // Get the roles data from the employeeService
+    const [roleData, setRolesData] = useState(employeeService.getRoles());
+    
     return(<>
         <section>
             <h1>Leadership and Management</h1>
@@ -22,5 +28,6 @@ export function Organization() {
             </tbody>
             </table>
         </section>
+        <AddRoleForm onCreated={() => setRolesData(employeeService.getRoles())} />
     </>);
 }
